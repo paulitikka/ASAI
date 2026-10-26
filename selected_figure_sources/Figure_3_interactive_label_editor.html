@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Figure 3 interactive amino-acid label editor</title>
+<style>
+  :root { --blue:#0072B2; --orange:#D55E00; --ink:#202020; --grey:#777; --bad:#C62828; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:#f3f5f7; color:var(--ink); font:15px/1.35 Arial,Helvetica,sans-serif; }
+  .shell { max-width:1440px; margin:0 auto; padding:18px; }
+  .bar { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:12px; }
+  h1 { font-size:20px; margin:0 18px 0 0; }
+  button { border:1px solid #aeb5bc; border-radius:6px; background:#fff; padding:8px 11px; cursor:pointer; font-weight:600; }
+  button:hover { background:#eaf4fa; border-color:var(--blue); }
+  label.toggle { display:flex; gap:7px; align-items:center; padding:7px 10px; background:#fff; border:1px solid #d5d9dd; border-radius:6px; }
+  .status { margin-left:auto; padding:7px 10px; border-radius:6px; background:#e7f4ea; color:#185b2a; font-weight:700; }
+  .status.bad { background:#fde9e7; color:#8f1d18; }
+  .panel { background:white; border:1px solid #d7dce0; border-radius:8px; box-shadow:0 2px 10px #0000000d; overflow:hidden; }
+  svg { display:block; width:100%; height:auto; touch-action:none; user-select:none; }
+  .help { margin:12px 2px 0; color:#4d555c; }
+  details { margin-top:12px; background:#fff; border:1px solid #d7dce0; border-radius:8px; padding:10px 12px; }
+  summary { cursor:pointer; font-weight:700; }
+  textarea { width:100%; min-height:190px; margin-top:10px; padding:10px; border:1px solid #cbd1d6; border-radius:5px; font:12px/1.35 Consolas,monospace; }
+  .leader { stroke:var(--grey); stroke-width:2.1; stroke-linecap:round; }
+  .datum { fill:var(--ink); }
+  .aa-circle { fill:var(--blue); stroke:var(--ink); stroke-width:2.2; cursor:grab; }
+  .aa-text { fill:white; font-size:19px; font-weight:700; text-anchor:middle; dominant-baseline:central; pointer-events:none; }
+  .aa-group.dragging .aa-circle { cursor:grabbing; filter:brightness(1.12); }
+  .aa-group.problem .aa-circle { stroke:var(--bad); stroke-width:4; }
+  .aa-group.problem .leader { stroke:var(--bad); }
+  .axis { stroke:var(--ink); stroke-width:3; }
+  .tick { stroke:var(--ink); stroke-width:2; }
+  .tick-text { fill:var(--ink); font-size:20px; }
+  .axis-title { fill:var(--ink); font-size:25px; }
+  .corr { stroke:var(--orange); stroke-width:7; stroke-linecap:square; }
+  .annotation { fill:#050505; font-size:27px; font-weight:700; }
+</style>
+</head>
+<body>
+<main class="shell">
+  <div class="bar">
+    <h1>Figure 3 label editor</h1>
+    <button id="reset">Reset compact layout</button>
+    <button id="undo">Undo</button>
+    <button id="png">Export PNG</button>
+    <button id="svgExport">Export SVG</button>
+    <button id="csv">Export offsets CSV</button>
+    <button id="copyR">Copy R offsets</button>
+    <label class="toggle"><input id="sameSide" type="checkbox" checked> Keep labels on the point side of the regression line</label>
+    <span id="status" class="status">Layout OK</span>
+  </div>
+  <section class="panel">
+    <svg id="plot" viewBox="0 0 1200 820" role="img" aria-label="Interactive plot of PC2 coordinate against dispersion">
+      <rect width="1200" height="820" fill="white"/>
+      <g id="axes"></g>
+      <line id="fit" class="corr"/>
+      <g id="leaders"></g>
+      <g id="points"></g>
+      <g id="labels"></g>
+      <text id="corrText" x="1110" y="86" class="annotation" text-anchor="end"></text>
+      <text x="630" y="800" class="axis-title" text-anchor="middle">SD of per-chain mean RSA (unitless)</text>
+      <text x="35" y="385" class="axis-title" text-anchor="middle" transform="rotate(-90 35 385)">PC2 coordinate (unitless)</text>
+    </svg>
+  </section>
+  <p class="help">Drag a blue amino-acid circle. The black dot remains the measured value and the grey segment follows the label. Red marks indicate an overlap, a crossed leader, or a label too close to the regression line. Positions are saved in this browser automatically.</p>
+  <details>
+    <summary>R-ready offsets</summary>
+    <textarea id="rCode" readonly></textarea>
+  </details>
+</main>
+<script>
+(() => {
+  const BLUE="#0072B2", INK="#202020";
+  const data = [
+    {aa:"A",x:0.0951864253436227,y:0.0430607516915366},
+    {aa:"C",x:0.0923966442250065,y:0.0935666791201932},
+    {aa:"D",x:0.0895300395308083,y:0.168163779962814},
+    {aa:"E",x:0.0843871366107406,y:0.263950422263712},
+    {aa:"F",x:0.0901078642874393,y:0.107981862314473},
+    {aa:"G",x:0.106877756663518,y:-0.0438449329443316},
+    {aa:"H",x:0.1372590877254,y:-0.464853620826278},
+    {aa:"I",x:0.0832549637688622,y:0.193059970463831},
+    {aa:"K",x:0.0910962965588522,y:0.202981399461774},
+    {aa:"L",x:0.0720336854075302,y:0.303249628517662},
+    {aa:"M",x:0.145909347454772,y:-0.57243837907489},
+    {aa:"N",x:0.117985615452717,y:-0.170816612337615},
+    {aa:"P",x:0.112868874184786,y:-0.138203347592984},
+    {aa:"Q",x:0.107137522949023,y:-0.0366262324240114},
+    {aa:"R",x:0.104626886345065,y:-0.0154401157659633},
+    {aa:"S",x:0.101081728918982,y:-0.00287564606051793},
+    {aa:"T",x:0.0959117684098279,y:0.0482680114203396},
+    {aa:"V",x:0.0761712888960068,y:0.251691931102695},
+    {aa:"W",x:0.115241930791277,y:-0.219009402371263},
+    {aa:"Y",x:0.0987502536129159,y:-0.0118661469211781}
+  ];
+  const defaults = {
+    A:[0,-.060000],C:[-.038044,-.025420],D:[.042000,0],E:[.040338,.016709],
+    F:[-.040338,.016709],G:[.042000,0],H:[-.036418,.029888],I:[-.021389,-.051637],
+    K:[.034408,.034408],L:[.005852,-.059415],M:[-.040338,.016709],N:[.036418,-.029888],
+    P:[.034408,.034408],Q:[0,.060000],R:[-.016700,.055053],S:[-.021389,-.051637],
+    T:[-.042000,0],V:[0,-.060000],W:[-.042000,0],Y:[-.031955,-.038937]
+  };
+  const svg=document.getElementById("plot"), NS="http://www.w3.org/2000/svg";
+  const P={l:125,r:1135,t:48,b:720}, labelR=16, pointR=5;
+  const rawX=data.map(d=>d.x), rawY=data.map(d=>d.y);
+  const dataXR=Math.max(...rawX)-Math.min(...rawX), dataYR=Math.max(...rawY)-Math.min(...rawY);
+  const xMin=Math.min(...rawX)-.10*dataXR, xMax=Math.max(...rawX)+.10*dataXR;
+  const yMin=Math.min(...rawY)-.10*dataYR, yMax=Math.max(...rawY)+.10*dataYR;
+  const sx=x=>P.l+(x-xMin)/(xMax-xMin)*(P.r-P.l);
+  const sy=y=>P.b-(y-yMin)/(yMax-yMin)*(P.b-P.t);
+  const ix=X=>xMin+(X-P.l)/(P.r-P.l)*(xMax-xMin);
+  const iy=Y=>yMin+(P.b-Y)/(P.b-P.t)*(yMax-yMin);
+  const mean=a=>a.reduce((s,v)=>s+v,0)/a.length;
+  const mx=mean(rawX), my=mean(rawY);
+  const slope=data.reduce((s,d)=>s+(d.x-mx)*(d.y-my),0)/data.reduce((s,d)=>s+(d.x-mx)**2,0);
+  const intercept=my-slope*mx;
+  const r=data.reduce((s,d)=>s+(d.x-mx)*(d.y-my),0)/Math.sqrt(data.reduce((s,d)=>s+(d.x-mx)**2,0)*data.reduce((s,d)=>s+(d.y-my)**2,0));
+  const fitY=x=>intercept+slope*x;
+  const fitScreenSlope=(sy(fitY(xMax))-sy(fitY(xMin)))/(sx(xMax)-sx(xMin));
+  const fitScreenIntercept=sy(fitY(xMin))-fitScreenSlope*sx(xMin);
+  const pointSide=d=>Math.sign(sy(d.y)-(fitScreenSlope*sx(d.x)+fitScreenIntercept))||1;
+  let history=[], drag=null;
+
+  const el=(tag,attrs={},parent=svg)=>{
+    const n=document.createElementNS(NS,tag);
+    for(const [k,v] of Object.entries(attrs)) n.setAttribute(k,v);
+    parent.appendChild(n); return n;
+  };
+  const axes=document.getElementById("axes");
+  el("line",{x1:P.l,y1:P.b,x2:P.r,y2:P.b,class:"axis"},axes);
+  el("line",{x1:P.l,y1:P.t,x2:P.l,y2:P.b,class:"axis"},axes);
+  const xTicks=[.07,.08,.09,.10,.11,.12,.13,.14];
+  const yTicks=[-.6,-.4,-.2,0,.2];
+  xTicks.forEach(v=>{ const X=sx(v); el("line",{x1:X,y1:P.b,x2:X,y2:P.b+13,class:"tick"},axes); const t=el("text",{x:X,y:P.b+42,class:"tick-text","text-anchor":"middle"},axes); t.textContent=v.toFixed(2); });
+  yTicks.forEach(v=>{ const Y=sy(v); el("line",{x1:P.l-13,y1:Y,x2:P.l,y2:Y,class:"tick"},axes); const t=el("text",{x:P.l-22,y:Y+7,class:"tick-text","text-anchor":"end"},axes); t.textContent=v.toFixed(1).replace("-","−"); });
+  const fit=document.getElementById("fit"); fit.setAttribute("x1",sx(xMin)); fit.setAttribute("y1",sy(fitY(xMin))); fit.setAttribute("x2",sx(xMax)); fit.setAttribute("y2",sy(fitY(xMax)));
+  document.getElementById("corrText").textContent=`Pearson r = ${r.toFixed(3)}`;
+
+  function defaultState(){
+    return Object.fromEntries(data.map(d=>[d.aa,{X:sx(d.x+defaults[d.aa][0]*dataXR),Y:sy(d.y+defaults[d.aa][1]*dataYR)}]));
+  }
+  function loadState(){
+    try { const z=JSON.parse(localStorage.getItem("asaiFigure3LabelsV2")); if(z && data.every(d=>z[d.aa])) return z; } catch(e){}
+    return defaultState();
+  }
+  let state=loadState();
+
+  for(const d of data){
+    const line=el("line",{class:"leader","data-aa":d.aa},document.getElementById("leaders"));
+    const point=el("circle",{cx:sx(d.x),cy:sy(d.y),r:pointR,class:"datum"},document.getElementById("points"));
+    const g=el("g",{class:"aa-group","data-aa":d.aa,tabindex:"0"},document.getElementById("labels"));
+    el("circle",{r:labelR,class:"aa-circle"},g); const tx=el("text",{class:"aa-text"},g); tx.textContent=d.aa;
+    g.addEventListener("pointerdown",ev=>startDrag(ev,d.aa));
+  }
+
+  function snapshot(){ return JSON.parse(JSON.stringify(state)); }
+  function startDrag(ev,aa){
+    ev.preventDefault(); history.push(snapshot()); if(history.length>50) history.shift();
+    drag={aa}; ev.currentTarget.classList.add("dragging"); ev.currentTarget.setPointerCapture(ev.pointerId);
+    ev.currentTarget.addEventListener("pointermove",moveDrag); ev.currentTarget.addEventListener("pointerup",endDrag,{once:true});
+    ev.currentTarget.addEventListener("pointercancel",endDrag,{once:true});
+  }
+  function svgPoint(ev){ const q=svg.createSVGPoint(); q.x=ev.clientX; q.y=ev.clientY; return q.matrixTransform(svg.getScreenCTM().inverse()); }
+  function moveDrag(ev){
+    if(!drag) return; const q=svgPoint(ev), d=data.find(v=>v.aa===drag.aa), side=pointSide(d), margin=labelR+3;
+    let X=Math.max(P.l+labelR,Math.min(P.r-labelR,q.x)), Y=Math.max(P.t+labelR,Math.min(P.b-labelR,q.y));
+    if(document.getElementById("sameSide").checked){
+      const lineY=fitScreenSlope*X+fitScreenIntercept, denom=Math.sqrt(1+fitScreenSlope**2), residual=Y-lineY;
+      if(side*residual<margin*denom) Y=lineY+side*margin*denom;
+      Y=Math.max(P.t+labelR,Math.min(P.b-labelR,Y));
+    }
+    state[drag.aa]={X,Y}; render();
+  }
+  function endDrag(ev){
+    ev.currentTarget.classList.remove("dragging"); ev.currentTarget.removeEventListener("pointermove",moveDrag); drag=null; save(); render();
+  }
+  function orient(a,b,c){ return (b.X-a.X)*(c.Y-a.Y)-(b.Y-a.Y)*(c.X-a.X); }
+  function segmentsCross(a,b,c,d){ return orient(a,b,c)*orient(a,b,d)<0 && orient(c,d,a)*orient(c,d,b)<0; }
+  function problems(){
+    const bad=new Set(); let overlaps=0,crossings=0,lineIssues=0;
+    for(let i=0;i<data.length;i++){
+      const a=data[i], la=state[a.aa], pa={X:sx(a.x),Y:sy(a.y)};
+      const lineDist=Math.abs(la.Y-(fitScreenSlope*la.X+fitScreenIntercept))/Math.sqrt(1+fitScreenSlope**2);
+      if(pointSide(a)*(la.Y-(fitScreenSlope*la.X+fitScreenIntercept))<=0 || lineDist<labelR+2){ bad.add(a.aa); lineIssues++; }
+      for(let j=i+1;j<data.length;j++){
+        const b=data[j], lb=state[b.aa], pb={X:sx(b.x),Y:sy(b.y)};
+        if(Math.hypot(la.X-lb.X,la.Y-lb.Y)<2*labelR+2){ bad.add(a.aa);bad.add(b.aa);overlaps++; }
+        if(segmentsCross(pa,la,pb,lb)){ bad.add(a.aa);bad.add(b.aa);crossings++; }
+      }
+      for(const b of data){
+        if(Math.hypot(la.X-sx(b.x),la.Y-sy(b.y))<labelR+pointR+2){ bad.add(a.aa); overlaps++; }
+      }
+    }
+    return {bad,overlaps,crossings,lineIssues};
+  }
+  function render(){
+    for(const d of data){
+      const s=state[d.aa], g=document.querySelector(`.aa-group[data-aa="${d.aa}"]`), line=document.querySelector(`.leader[data-aa="${d.aa}"]`);
+      g.setAttribute("transform",`translate(${s.X} ${s.Y})`); line.setAttribute("x1",sx(d.x)); line.setAttribute("y1",sy(d.y)); line.setAttribute("x2",s.X); line.setAttribute("y2",s.Y);
+    }
+    const p=problems(); document.querySelectorAll(".aa-group").forEach(g=>g.classList.toggle("problem",p.bad.has(g.dataset.aa)));
+    const status=document.getElementById("status"), n=p.overlaps+p.crossings+p.lineIssues;
+    status.textContent=n?`${n} layout issue${n===1?"":"s"}`:"Layout OK"; status.classList.toggle("bad",!!n);
+    updateR();
+  }
+  function save(){ localStorage.setItem("asaiFigure3LabelsV2",JSON.stringify(state)); }
+  function offsets(){ return data.map(d=>({aa:d.aa,dx:(ix(state[d.aa].X)-d.x)/dataXR,dy:(iy(state[d.aa].Y)-d.y)/dataYR})); }
+  function rVector(name,vals){ return `  ${name} = c(${vals.map((v,i)=>(i%5===0&&i?"\n         ":"")+`${v>=0?" ":""}${v.toFixed(6)}`).join(",")})`; }
+  function rText(){ const o=offsets(); return `FIGURE3_LABEL_OFFSETS <- data.frame(\n  aa = AA,\n${rVector("dx",o.map(v=>v.dx))},\n${rVector("dy",o.map(v=>v.dy))},\n  stringsAsFactors = FALSE\n)`; }
+  function updateR(){ document.getElementById("rCode").value=rText(); }
+  function download(name,text,type){ const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([text],{type})); a.download=name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),1000); }
+  function serialisedSvg(){ const c=svg.cloneNode(true); c.setAttribute("xmlns",NS); const style=document.querySelector("style").textContent; const defs=document.createElementNS(NS,"defs"), st=document.createElementNS(NS,"style"); st.textContent=style; defs.appendChild(st); c.insertBefore(defs,c.firstChild); return new XMLSerializer().serializeToString(c); }
+
+  document.getElementById("reset").onclick=()=>{ history.push(snapshot()); state=defaultState(); save(); render(); };
+  document.getElementById("undo").onclick=()=>{ if(history.length){ state=history.pop(); save(); render(); } };
+  document.getElementById("copyR").onclick=async ev=>{
+    const txt=rText();
+    try { await navigator.clipboard.writeText(txt); }
+    catch(e) { const box=document.getElementById("rCode"); box.focus(); box.select(); document.execCommand("copy"); }
+    const old=ev.target.textContent; ev.target.textContent="Copied"; setTimeout(()=>ev.target.textContent=old,1200);
+  };
+  document.getElementById("csv").onclick=()=>download("Figure_3_label_offsets.csv","aa,dx,dy\n"+offsets().map(v=>`${v.aa},${v.dx.toFixed(8)},${v.dy.toFixed(8)}`).join("\n"),"text/csv");
+  document.getElementById("svgExport").onclick=()=>download("Figure_3_custom.svg",serialisedSvg(),"image/svg+xml");
+  document.getElementById("png").onclick=()=>{ const img=new Image(), url=URL.createObjectURL(new Blob([serialisedSvg()],{type:"image/svg+xml"})); img.onload=()=>{ const c=document.createElement("canvas"); c.width=2400;c.height=1640; const ctx=c.getContext("2d");ctx.fillStyle="white";ctx.fillRect(0,0,c.width,c.height);ctx.drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(url);c.toBlob(b=>{const a=document.createElement("a");a.href=URL.createObjectURL(b);a.download="Figure_3_custom.png";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)},"image/png");}; img.src=url; };
+  render();
+})();
+</script>
+</body>
+</html>
