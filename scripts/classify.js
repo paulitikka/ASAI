@@ -81,14 +81,12 @@ const overlap = [...PROK_GENERA].filter(g => EUK_GENERA.has(g));
 // classify every row of the organism file, keyed by chain (entry+chain, case-folded)
 const dec = new TextDecoder();
 const t = dec.decode(ctx.readBytes("uploads/0rgkv2a-selected_6908_organisms.csv"));
-const lines = t.split('\n');
+const lines = ctx.parseCsv(t);
 const chains = {};
 const unknowns = [];
 let rows = 0;
 for (let i = 1; i < lines.length; i++) {
-  const l = lines[i].replace(/\r$/, '');
-  if (!l) continue;
-  const f = l.split(',');
+  const f = lines[i];
   if (f.length < 4) continue;
   const key = ((f[0] || '').trim() + (f[1] || '').trim()).toLowerCase();
   const org = (f[3] || '').trim();
@@ -102,6 +100,8 @@ for (const key in chains) counts[chains[key].k] = (counts[chains[key].k] || 0) +
 
 ctx.writeFile("scratch/kg/assign.json", JSON.stringify(chains));
 ctx.writeFile("scratch/kg/spec.json", JSON.stringify({
+  csvParsing:"quote-aware CSV; no external taxonomy refresh",
+  prokaryoteFallbackPattern:PROK_RE.source,eukaryoteFallbackPattern:EUK_RE.source,
   ruleOrder: ["synthetic","virus","exact species","prokaryote genus","eukaryote genus","regex fallbacks","unknown"],
   prokGenera: [...PROK_GENERA].sort(),
   eukGenera: [...EUK_GENERA].sort(),

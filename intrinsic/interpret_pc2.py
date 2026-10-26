@@ -33,6 +33,6 @@ f'A linear model containing molecular weight and the Fauchere–Pliska experimen
 'Primary-source context: Wolfenden et al. (1981), “Affinities of amino acid side chains for solvent water,” Biochemistry 20, 849–855, DOI 10.1021/bi00507a030, describes vapor-to-water hydration potentials corrected to pH 7. This thermodynamic comparison differs from partition between water and an organic solvent. Source: https://pubmed.ncbi.nlm.nih.gov/7213619/.',
 'Reproduction: run python interpret_pc2.py using the included selected_intrinsic_values.csv. This writes the supporting correlations, numeric results, and this narrative. The primary selection, PCA results and RSA comparisons are unchanged.'
 ]
-(P/'PC2_interpretation.md').write_text('# PC2 interpretation: side-chain size\n\nUpdated 5 October 2026.\n\n'+'\n\n'.join(paragraphs)+'\n\n'+t.round(3).to_csv(index=False))
-(P/'PC2_interpretation_section.html').write_text('<h2>PC2 interpretation: side-chain size</h2><p>Added 5 October 2026.</p>'+''.join('<p>'+html.escape(q)+'</p>' for q in paragraphs)+t.round(3).to_html(index=False))
+(P/'PC2_interpretation.md').write_text('# PC2 interpretation: side-chain size\n\nRegenerated with release v2026.10.26-r3.\n\n'+'\n\n'.join(paragraphs)+'\n\n'+t.round(3).to_csv(index=False))
+(P/'PC2_interpretation_section.html').write_text('<h2>PC2 interpretation: side-chain size</h2><p>Release v2026.10.26-r3.</p>'+''.join('<p>'+html.escape(q)+'</p>' for q in paragraphs)+t.round(3).to_html(index=False))
 print('PC2 correlations and reconstruction verified:',r2)

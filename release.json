@@ -1,0 +1,15 @@
+{
+  "version": "2026.10.26-r3",
+  "origin": "Author-supplied Roman v9 audit, with explicit r3 corrections",
+  "inputs": {
+    "inputs/aaindex1.txt": "560f102dbee8ca9837186c4b2b93e253ea6efc58c88617234cef4e54bd61f676",
+    "inputs/intrinsic_51_manifest.csv": "0bb3ec99cfb5547f9d0e1ee6f2805961be1abae5ce58a66ecee1493bfd5f8e6e",
+    "inputs/residue_RSA_6908_corrected.csv": "412039f02ff0fb37730e41eacd1bda6d9defb0922318d927e46088c8a0b147f5",
+    "inputs/selected_6908_organisms.csv": "2b80bece3d56a2b25ddc98ff706f2cfe585a2a4c5f04d2850394c68b007be2e9",
+    "inputs/aaindex_records.json": "726ca0907faa4801e0f97ace6f9f10171e15e6cd8bc6f12b3347ac8a59a892e7"
+  },
+  "interval_tolerance_RSA": 1e-12,
+  "split_seed": 20260930,
+  "n_splits": 20,
+  "split_design_sha256": "1e332efc24fdecfd2edd13d4e9e8287e97c7c43cce82735792206e385599684d"
+}

@@ -3,8 +3,11 @@ import pandas as pd,numpy as np
 import hashlib
 from scipy.stats import skew,kurtosis
 P=Path(__file__).resolve().parent;root=P.parent
-assert hashlib.sha256((P/'input/residue_RSA_6908_corrected.csv').read_bytes()).hexdigest()=='412039f02ff0fb37730e41eacd1bda6d9defb0922318d927e46088c8a0b147f5'
-order=list('ARNDCQEGHILKMFPSTWYV');d=pd.read_csv(P/'input/residue_RSA_6908_corrected.csv');g=d.groupby(['pdb','chain','aa']).rsa.agg(['mean','count']);a=g['mean'].unstack('aa').reindex(columns=order);n=g['count'].unstack('aa').reindex(columns=order)
+assert hashlib.sha256((root/'inputs/residue_RSA_6908_corrected.csv').read_bytes()).hexdigest()=='412039f02ff0fb37730e41eacd1bda6d9defb0922318d927e46088c8a0b147f5'
+order=list('ARNDCQEGHILKMFPSTWYV')
+g=pd.read_csv(root/'outputs/chain_amino_acid_mean_RSA.csv',keep_default_na=False,float_precision='round_trip')
+a=g.pivot(index=['pdb','chain'],columns='aa',values='mean_RSA').reindex(columns=order)
+n=g.pivot(index=['pdb','chain'],columns='aa',values='n_residues').reindex(columns=order)
 q=np.nanquantile(a,np.arange(1,100)/100,axis=0).T;xc=q-q.mean(0);u,s,v=np.linalg.svd(xc,full_matrices=False)
 ref=pd.read_csv(P/'rsa_coordinates.csv',index_col=0).loc[order]
 for k in range(3):

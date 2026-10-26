@@ -73,6 +73,8 @@ let pc2 = Array.from({length:20},(_,i)=>d1.V[i][d1.ord[1]]);
 const iK = AA.indexOf('K'), iG = AA.indexOf('G');
 if (pc2[iK] < pc2[iG]) pc2 = pc2.map(x=>-x);
 const pc3 = Array.from({length:20},(_,i)=>d1.V[i][d1.ord[2]]);
+if (pc3[AA.indexOf('M')] < 0) for (let i=0;i<20;i++) pc3[i]*=-1;
+const table1FullPrecision = AA.map((t,j)=>({t,meanRSA:meanRSA[j],PC1:pc1[j],PC2:pc2[j],PC3:pc3[j]}));
 const table1 = AA.map((t,j)=>({ t, meanRSA:+meanRSA[j].toFixed(4), PC1:+pc1[j].toFixed(4), PC2:+pc2[j].toFixed(4), PC3:+pc3[j].toFixed(4) }));
 const shares1 = d1.shares.slice(0,4).map(v=>+v.toFixed(2));
 
@@ -86,6 +88,7 @@ const gm = AA.map((_,j)=>{ let s=0,n=0; for (const id of [...euk,...prok]){ cons
 { let acc=0; for (let i=0;i<20;i++) acc += p1a[i]*gm[i] + p1a[i+20]*gm[i]; if (acc<0) p1a=p1a.map(x=>-x); }
 let p2a = Array.from({length:40},(_,i)=>d2.V[i][d2.ord[1]]);
 { const k1=(p2a[iK]+p2a[iK+20])/2, g1=(p2a[iG]+p2a[iG+20])/2; if (k1<g1) p2a=p2a.map(x=>-x); }
+const table2FullPrecision = AA.map((t,j)=>({t,PC1_euk:p1a[j],PC1_prok:p1a[j+20],dPC1:p1a[j]-p1a[j+20],PC2_euk:p2a[j],PC2_prok:p2a[j+20],dPC2:p2a[j]-p2a[j+20]}));
 const table2 = AA.map((t,j)=>({ t, PC1_euk:+p1a[j].toFixed(4), PC1_prok:+p1a[j+20].toFixed(4),
   dPC1:+(p1a[j]-p1a[j+20]).toFixed(4), PC2_euk:+p2a[j].toFixed(4), PC2_prok:+p2a[j+20].toFixed(4),
   dPC2:+(p2a[j]-p2a[j+20]).toFixed(4) }));
@@ -125,20 +128,24 @@ for (const id of order){
     if (c.cnt[j] === 0) continue;
     const pr = c.sum[j]/c.cnt[j];
     perTypeTotal[j]++;
-    if (pr === 0) { cnt[0][j]++; continue; }
-    for (let k=1;k<IV.length;k++){ const iv=IV[k]; if (pr > iv.lo && pr <= iv.hi){ cnt[k][j]++; break; } }
+    cnt[ctx.numericPolicy.rsaInterval(pr)][j]++;
+
   }
 }
 const totalPairs = perTypeTotal.reduce((a,b)=>a+b,0);
-const S5 = IV.map((iv,k) => {
+const S5FullPrecision = IV.map((iv,k) => {
   const frac = cnt[k].map((v,j)=> perTypeTotal[j] ? v/perTypeTotal[j] : 0);
   const m = frac.reduce((a,b)=>a+b,0)/20;
   const sd = Math.sqrt(frac.reduce((s,v)=>s+(v-m)*(v-m),0)/19);
   const n = cnt[k].reduce((a,b)=>a+b,0);
-  return { interval: iv.n, pairs: n, pct: +(100*n/totalPairs).toFixed(2), cv: +(m? sd/m : 0).toFixed(3) };
+  return {interval:iv.n,pairs:n,pct:100*n/totalPairs,cv:m?sd/m:0};
 });
 
+const S5=S5FullPrecision.map(r=>({...r,pct:+r.pct.toFixed(2),cv:+r.cv.toFixed(3)}));
 const out = { shares1, table1, shares2, table2, S3, S5, totalPairs,
+  table1FullPrecision,table2FullPrecision,S5FullPrecision,intervalCountsByType:cnt,chainsWithType:perTypeTotal,aminoAcidOrder:AA,
+  shares1FullPrecision:d1.shares,shares2FullPrecision:d2.shares,
+  intervalPolicy:{tolerance:ctx.numericPolicy.intervalTolerance,closure:'(lower, upper]; exact zeros separate; last >0.9'},
   kingdomCounts: { euk: euk.length, prok: prok.length } };
 ctx.writeFile('scratch/bundle/results/decompose.json', JSON.stringify(out,null,1));
 return { shares1, shares2, totalPairs, S5,

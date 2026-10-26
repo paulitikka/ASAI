@@ -10,12 +10,8 @@ const RIDGE = 1e-9, NSPLIT = 20, SEED = 20260930, NPERM = 500;
 const pool = JSON.parse(ctx.readText(ctx.files[0]));
 const ch = pool.chains, order = pool.order;
 const seq = {};
-{
-  const t = ctx.readText(ctx.files[1]);
-  const ls = t.split("\n");
-  for (let i=1;i<ls.length;i++){ const l=ls[i].replace(/\r$/,""); if(!l) continue;
-    const f=l.split(","); if(f.length<3) continue;
-    seq[((f[0]||"").trim()+(f[1]||"").trim()).toLowerCase()] = (f[2]||"").trim(); }
+for(const f of ctx.parseCsv(ctx.readText(ctx.files[1])).slice(1)) {
+  if(f.length>=3)seq[(f[0].trim()+f[1].trim()).toLowerCase()]=f[2].trim();
 }
 const ids = order.filter(id => ch[id].L >= 40 && seq[id]);
 const P = {};
@@ -86,7 +82,7 @@ for (let j=0;j<20;j++){
 }
 // permutation on mean |r|; one shuffle order reused across terms within a replicate
 let sg = 4242 >>> 0; const rnd = () => { sg=(sg*1664525+1013904223)>>>0; return sg/4294967296; };
-const obsAbs = {}; for (const tm of TERMS) obsAbs[tm] = Math.abs(avg(simple[tm].r));
+const obsAbs = {}; for (const tm of TERMS) obsAbs[tm] = avg(simple[tm].r.map(Math.abs));
 const ge = {}; for (const tm of TERMS) ge[tm] = 0;
 const permOrder = AA.map((_,j)=>j).filter(j=>byType[j].length>=200);
 for (let k=0;k<NPERM;k++){
@@ -121,10 +117,8 @@ const heldOwn = {}; for (const t of AA) heldOwn[t] = [];
 for (let sp=0; sp<NSPLIT; sp++){
   for (let j=0;j<20;j++){
     const l = byType[j]; if (l.length < 200) continue;
-    const sh = l.slice();
-    for(let i=sh.length-1;i>0;i--){ const q=Math.floor(r1()*(i+1)); const t=sh[i]; sh[i]=sh[q]; sh[q]=t; }
-    const half = Math.floor(sh.length/2);
-    const tr = sh.slice(0,half), te = sh.slice(half);
+    const assigned = ctx.splitDesign.partition(AA[j],sp,l);
+    const tr=assigned.train,te=assigned.test;
     const yTr = tr.map(id=>resp[j][id]), yTe = te.map(id=>resp[j][id]);
     for (const nm of Object.keys(SETS)) {
       const beta = olsFit(tr.map(id=>Xs[nm][id]), yTr);
@@ -139,6 +133,8 @@ for (let sp=0; sp<NSPLIT; sp++){
 const out = {
   chains: ids.length,
   permutationReplicates: NPERM,
+  permutationStatistic:"mean absolute Pearson r across the twenty amino-acid types, identical for observed and null",
+  observedPermutationStatistics:obsAbs,
   correlations: Object.fromEntries(TERMS.map(tm => [tm, {
     meanPearson: +avg(simple[tm].r).toFixed(3), meanSpearman: +avg(simple[tm].rho).toFixed(3),
     permutationP: +((ge[tm]+1)/(NPERM+1)).toFixed(3),

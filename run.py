@@ -1,17 +1,28 @@
-"""Run from any working directory: python /path/to/run.py [--full]."""
-from pathlib import Path
-import subprocess,sys,os,json,hashlib
-P=Path(__file__).resolve().parent
-os.environ.setdefault('OPENBLAS_NUM_THREADS','1');os.environ.setdefault('OMP_NUM_THREADS','1')
-def run(args):subprocess.run(args,cwd=P,check=True)
-run([os.environ.get('ASAI_NODE', 'node'),'run_js.cjs'])
-# Scientific PC3 follow-up: original algorithms, seed and reference orientation.
-import shutil
-(P/'rsa_pc3/input').mkdir(parents=True, exist_ok=True)
-shutil.copy(P/'inputs/residue_RSA_6908_corrected.csv',P/'rsa_pc3/input/residue_RSA_6908_corrected.csv')
-run([sys.executable,'rsa_pc3/explore.py']);run([sys.executable,'rsa_pc3/validate.py'])
-if '--full' in sys.argv:
- run([sys.executable,'kingdom_null/test.py'])
- run([sys.executable,'intrinsic/analyze.py'])
-run([sys.executable,'export_tables_figures.py'])
-print('Completed. New results: outputs/, rsa_pc3/, and (with --full) kingdom_null/, intrinsic/.')
+"""Reproduce the processed-data analysis. Use --full for every article analysis."""
+import argparse,json,sys
+from runtime import ROOT,verify_inputs,locate_node,step,environment
+
+def main():
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--full',action='store_true',help='Also rerun 200,000 whole-chain allocations and intrinsic-AA PA/CCA.')
+    parser.add_argument('--no-figures',action='store_true')
+    args=parser.parse_args();environment();verify_inputs()
+    stages=[('Calculating RSA, context models and corrected permutation tests',[locate_node(),'run_js.cjs']),
+            ('Exporting six tables and numerical source data',[sys.executable,'export_results.py']),
+            ('Preparing canonical RSA coordinates for downstream analyses',[sys.executable,'prepare_analysis.py']),
+            ('Rebuilding PC3 distribution descriptors',[sys.executable,'rsa_pc3/explore.py']),
+            ('Validating PC3 asymmetry and property correlations',[sys.executable,'rsa_pc3/validate.py'])]
+    if args.full:
+        stages += [('Running 200,000 whole-chain random allocations',[sys.executable,'kingdom_null/test.py']),
+                   ('Running intrinsic-AA parallel analysis and CCA',[sys.executable,'intrinsic/analyze.py']),
+                   ('Running intrinsic-AA family sensitivity',[sys.executable,'intrinsic/sensitivity.py']),
+                   ('Exporting intrinsic PC2 interpretation',[sys.executable,'intrinsic/interpret_pc2.py'])]
+    if not args.no_figures:stages.append(('Drawing Figures 1-4',[sys.executable,'plot_figures.py']))
+    stages.append(('Verifying the six tables',[sys.executable,'verify_tables.py']))
+    if args.full:stages.append(('Independently checking raw data, PCA and all 2000 model fits',[sys.executable,'verify_independent.py']))
+    with (ROOT/'outputs/run.log').open('w',encoding='utf-8') as log:
+        for i,(title,command) in enumerate(stages,1):step(f'{i}/{len(stages)} {title}',command,log)
+    (ROOT/'outputs/run_scope.json').write_text(json.dumps({'version':'2026.10.26-r3','full':args.full,'figures':not args.no_figures,'all_stages_completed':True},indent=2)+'\n')
+    print('PASS. Analysis completed. Results: outputs/, source_data/, rsa_pc3/, intrinsic/, kingdom_null/.',flush=True)
+
+if __name__=='__main__':main()

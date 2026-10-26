@@ -15,15 +15,8 @@ const SEED = 20260930;
 const pool = JSON.parse(ctx.readText(ctx.files[0]));
 const ch = pool.chains, order = pool.order;
 const seq = {};
-{
-  const t = ctx.readText(ctx.files[1]);
-  const ls = t.split("\n");
-  for (let i = 1; i < ls.length; i++) {
-    const l = ls[i].replace(/\r$/, ""); if (!l) continue;
-    const f = l.split(",");
-    if (f.length < 3) continue;
-    seq[((f[0]||"").trim() + (f[1]||"").trim()).toLowerCase()] = (f[2]||"").trim();
-  }
+for(const f of ctx.parseCsv(ctx.readText(ctx.files[1])).slice(1)) {
+  if(f.length>=3)seq[(f[0].trim()+f[1].trim()).toLowerCase()]=f[2].trim();
 }
 const ids = order.filter(id => ch[id].L >= 40 && seq[id]);
 
@@ -94,11 +87,13 @@ function olsFit(X, y) {
   }
   return M.map(r=>r[p]);
 }
+let lastEvaluation=null;
 function r2On(beta, X, y) {
   const n = y.length; let yb = 0; for (const v of y) yb += v; yb /= n;
   let ssr = 0, sst = 0;
   for (let i=0;i<n;i++){ let yh=0; for (let a=0;a<beta.length;a++) yh += beta[a]*X[i][a];
     ssr += (y[i]-yh)**2; sst += (y[i]-yb)**2; }
+  lastEvaluation={n_test:n,SSE:ssr,SST:sst};
   return sst === 0 ? null : 1 - ssr/sst;
 }
 const byType = AA.map((_, j) => ids.filter(id => ch[id].cnt[j] > 0));
@@ -108,19 +103,20 @@ const X = {}; for (const id of ids) { X[id] = {}; for (const nm of Object.keys(S
 let seed = SEED >>> 0;
 const rnd = () => { seed = (seed*1664525 + 1013904223) >>> 0; return seed/4294967296; };
 const cell = [];
+const modelDiagnostics=[];
 for (let sp = 0; sp < NSPLIT; sp++) {
   for (let j = 0; j < 20; j++) {
     const l = byType[j];
     if (l.length < 200) continue;
-    const sh = l.slice();
-    for (let i=sh.length-1;i>0;i--){ const q=Math.floor(rnd()*(i+1)); const t=sh[i]; sh[i]=sh[q]; sh[q]=t; }
-    const half = Math.floor(sh.length/2);
-    const tr = sh.slice(0,half), te = sh.slice(half);
+    const assigned = ctx.splitDesign.partition(AA[j],sp,l);
+    const tr=assigned.train,te=assigned.test;
     const yTr = tr.map(id=>resp[j][id]), yTe = te.map(id=>resp[j][id]);
     const rec = { split: sp, type: AA[j] };
     for (const nm of Object.keys(SETS_WITH_LENGTH)) {
       const beta = olsFit(tr.map(id=>X[id][nm]), yTr);
-      rec[nm] = beta ? r2On(beta, te.map(id=>X[id][nm]), yTe) : null;
+      if(!beta)throw new Error("Model fit failed: "+AA[j]+" split "+(sp+1)+" "+nm);
+      rec[nm] = r2On(beta, te.map(id=>X[id][nm]), yTe);
+      modelDiagnostics.push({split:sp+1,aa:AA[j],model:nm,n_train:tr.length,...lastEvaluation,R2:rec[nm]});
     }
     cell.push(rec);
   }
@@ -146,6 +142,9 @@ function paired(u, v) {
   return { meanDiff: +mean(cell.filter(r=>r[u]!==null&&r[v]!==null).map(r=>r[u]-r[v])).toFixed(4),
            meanPerSplitT: +mt.toFixed(2), splitsFavouring: ts.filter(t=>t>0).length, nSplits: ts.length };
 }
+ctx.writeFile("chain_predictors.json",JSON.stringify(P));
+ctx.writeFile("model_scores_by_split.json",JSON.stringify(cell,null,1));
+ctx.writeFile("model_diagnostics.json",JSON.stringify(modelDiagnostics,null,1));
 const out = {
   chains: ids.length,
   parameters: [

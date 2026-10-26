@@ -5,7 +5,7 @@ import pandas as pd
 from scipy.cluster.hierarchy import linkage,fcluster
 from scipy.spatial.distance import squareform
 P=Path(__file__).resolve().parent
-R=json.loads((P/'aaindex_records.json').read_text()); order=list('ARNDCQEGHILKMFPSTWYV')
+R=json.loads((P.parent/'inputs/aaindex_records.json').read_text()); order=list('ARNDCQEGHILKMFPSTWYV')
 # Explicit record decisions frozen before inspecting new spectra. Positions refer to bundled JSON.
 core=[13,14,20,21,22,*range(25,31),58,*range(71,77),*range(78,90),95,109,110,111,113,115,116,117,132,144,145,151,176,239,*range(313,318),354,355,382,387,388,396,398,399,400,401,506]
 oper=[11,12,15,16,17,32,177,178,179,180,238,433,477,478,479,480,482,512,513]

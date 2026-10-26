@@ -2,11 +2,11 @@ cff-version: 1.2.0
 message: "Cite the final repository record when its persistent identifier has been assigned."
 type: software
 title: "ASAI reproducible analysis code"
-version: "2026.10.26"
+version: "2026.10.26-r3"
 date-released: "2026-10-26"
 authors:
   - family-names: Tikka
     given-names: Pauli
   - family-names: Zubarev
     given-names: Roman A.
-abstract: "Frozen residue-level relative solvent accessibility data, chain and organism annotations, classification rules, reproducible analyses, numerical outputs and Figures 1 to 4 for the ASAI manuscript."
+abstract: "Reproducible analysis and figure-generation software for the ASAI manuscript; input data and frozen split ranks are deposited separately."

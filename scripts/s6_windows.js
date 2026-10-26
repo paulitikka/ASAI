@@ -68,6 +68,9 @@ function run(label, gE, gP){
   return { label, nEuk:gE.length, nProk:gP.length,
     meanLenEuk:+meanLen(gE).toFixed(1), meanLenProk:+meanLen(gP).toFixed(1),
     gap:+(meanLen(gP)-meanLen(gE)).toFixed(1),
+    meanLenEukFullPrecision:meanLen(gE),meanLenProkFullPrecision:meanLen(gP),
+    pc1_tFullPrecision:tOf(d1),pc2_tFullPrecision:tOf(d2),
+    deltaPC1FullPrecision:d1,deltaPC2FullPrecision:d2,
     shares: d.shares.slice(0,3),
     pc1_t:+tOf(d1).toFixed(2), pc1_pos:d1.filter(v=>v>0).length,
     pc2_t:+tOf(d2).toFixed(2), pc2_pos:d2.filter(v=>v>0).length };

@@ -64,11 +64,9 @@ function pearson(a, b) {
   return sab / Math.sqrt(sa * sb);
 }
 
-const COORD = {
-  PC1: {A:-0.0825,C:-0.3628,D:0.2533,E:0.3258,F:-0.2669,G:0.0593,H:0.0544,I:-0.2743,K:0.3873,L:-0.2426,M:-0.1562,N:0.1867,P:0.1955,Q:0.2194,R:0.2200,S:0.0645,T:0.0346,V:-0.2352,W:-0.2254,Y:-0.1550},
-  PC2: {A:0.0746,C:0.0758,D:0.1655,E:0.2580,F:0.1068,G:-0.0400,H:-0.4627,I:0.2028,K:0.1976,L:0.2999,M:-0.5794,N:-0.1572,P:-0.1423,Q:-0.0376,R:-0.0172,S:-0.0053,T:0.0457,V:0.2524,W:-0.2216,Y:-0.0160},
-  PC3: {A:-0.3895,C:0.2121,D:0.2498,E:0.2641,F:0.0368,G:0.2716,H:-0.2559,I:-0.0531,K:0.2718,L:-0.0130,M:0.3913,N:-0.2966,P:0.0527,Q:-0.2612,R:-0.1120,S:-0.2155,T:-0.1884,V:-0.0917,W:0.1873,Y:-0.0605}
-};
+const computed=JSON.parse(ctx.readText('outputs/decompose.json')).table1FullPrecision;
+const COORD=Object.fromEntries(['PC1','PC2','PC3'].map(k=>[k,Object.fromEntries(computed.map(r=>[r.t,r[k]]))]));
+
 
 const perPC = {};
 for (const key of ['PC1','PC2','PC3']) {
@@ -94,7 +92,7 @@ for (const key of ['PC1','PC2','PC3']) {
     top10: ranked.slice(0, 10).map(s => ({ acc: s.acc, desc: s.desc, r: s.r, hydro: s.hydro })) };
 }
 
-const out = { entries: records.length, hydroCount: records.filter(r => r.hydro).length, terms: TERMS, perPC };
+const out = { coordinateSource:"Full-precision PCA from outputs/decompose.json", rankingRule:"Absolute correlations rounded to three decimals before stable sorting; original v9 tie-order and U approximation retained", entries: records.length, hydroCount: records.filter(r => r.hydro).length, terms: TERMS, perPC };
 ctx.writeFile('scratch/bundle/results/aaindex_ranks.json', JSON.stringify(out, null, 1));
 return {
   entries: out.entries, hydroCount: out.hydroCount,

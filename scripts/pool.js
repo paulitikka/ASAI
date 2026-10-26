@@ -27,17 +27,8 @@ for (const p of ctx.files) {
     c.L++; c.cnt[j]++; c.sum[j] += rsa;
     chainSet.add(k);
     rows++;
-    if (rsa === 0) { zeroCount++; buckets[0]++; }
-    else if (rsa < 10) buckets[1]++;
-    else if (rsa < 20) buckets[2]++;
-    else if (rsa < 30) buckets[3]++;
-    else if (rsa < 40) buckets[4]++;
-    else if (rsa < 50) buckets[5]++;
-    else if (rsa < 60) buckets[6]++;
-    else if (rsa < 70) buckets[7]++;
-    else if (rsa < 80) buckets[8]++;
-    else if (rsa < 90) buckets[9]++;
-    else buckets[10]++;
+    if (rsa === 0) zeroCount++;
+    buckets[ctx.numericPolicy.rsaInterval(rsa)]++;
     if (rsa > sampleMaxRsa) sampleMaxRsa = rsa;
     if (rsa < sampleMinRsa) sampleMinRsa = rsa;
   }

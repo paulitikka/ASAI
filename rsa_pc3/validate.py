@@ -29,7 +29,7 @@ for b in range(100):
  asym=qb[:,94]+qb[:,4]-2*qb[:,49];cv.append(cc(uu[:,2],residual(asym,uu[:,:2])))
 R['split_chain_validation']={'replicates':100,'partial_asymmetry_correlation_quantiles_025_50_975':np.quantile(cv,[.025,.5,.975]).tolist()}
 # Exploratory property scan, control the maximum raw correlation within each searched family.
-records=json.load(open(P/'aaindex_records.json'));audit=pd.read_csv(P/'AAindex_553_audit.csv').set_index('accession');mat=np.column_stack([x['values'] for x in records]);mat=mat-mat.mean(0);mat=mat/np.linalg.norm(mat,axis=0);y=u[:,2];obs=y@mat
+records=json.load(open(root/'inputs/aaindex_records.json'));audit=pd.read_csv(root/'intrinsic/AAindex_553_audit.csv').set_index('accession');mat=np.column_stack([x['values'] for x in records]);mat=mat-mat.mean(0);mat=mat/np.linalg.norm(mat,axis=0);y=u[:,2];obs=y@mat
 perms=np.array([rng.permutation(20) for _ in range(20000)]);null=y[perms]@mat
 rows=[];sel=np.array([bool(audit.loc[x['accession'],'selected_primary']) for x in records]);maxall=np.max(abs(null),axis=1);maxsel=np.max(abs(null[:,sel]),axis=1)
 for i,x in enumerate(records):
