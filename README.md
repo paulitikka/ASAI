@@ -7,7 +7,6 @@ Release **v2026.10.26-r3**, derived from the author-supplied Roman v9 audit and 
 1. This code archive, also supplied as the GitHub package.
 2. `ASAI_Zenodo_data_v2026.10.26-r3.zip`, deposited separately. It contains frozen inputs, train/test ranks, annotations, classification audit, reference tables, numerical outputs and figure source data. It contains no executable analysis code or rendered manuscript figures.
 
-<<<<<<< HEAD
 The GitHub code ZIP and the Zenodo code ZIP contain exactly the same bytes. Use either one, not both. Copy the code folder contents to the root of the existing GitHub repository; retain the repository's existing `LICENSE`. See `LICENSING.md`.
 =======
 Download `ASAI_Zenodo_data_and_code_2026-10-26.zip` from the Zenodo record cited in
