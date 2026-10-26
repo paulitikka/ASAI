@@ -11,8 +11,7 @@ The GitHub code ZIP and the Zenodo code ZIP contain exactly the same bytes. Use 
 =======
 Download `ASAI_Zenodo_data_and_code_2026-10-26.zip` from the Zenodo record cited in
 the article (https://zenodo.org/records/23662053). Keep the ZIP
-outside the repository, then run:
->>>>>>> 527d733c2fb2437690fa228d7e5e5d8097ba22ca
+outside the repository, then run: 527d733c2fb2437690fa228d7e5e5d8097ba22ca
 
 ## Windows: reproduce the six tables
 
