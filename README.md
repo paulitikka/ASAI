@@ -9,7 +9,7 @@ runtime adapter, Python plotting, optional R plotting and verification programs.
 ## Get the frozen inputs
 
 Download `ASAI_Zenodo_data_and_code_2026-10-26.zip` from the Zenodo record cited in
-the article and linked from this repository's About section. Keep the ZIP
+the article (https://zenodo.org/records/23662053). Keep the ZIP
 outside the repository, then run:
 
 ```bash
